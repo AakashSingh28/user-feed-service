@@ -60,7 +60,6 @@ public class UserServiceImpl implements UserService {
             return followUserResponseDtoList;
         } catch (Exception e) {
             log.error("Error fetching potential users to be followed", e);
-            // You may choose to throw a custom exception or handle it as appropriate
             throw new RuntimeException("Error fetching potential users to be followed", e);
         }
     }
