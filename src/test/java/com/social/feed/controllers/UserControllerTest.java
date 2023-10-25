@@ -3,9 +3,10 @@ package com.social.feed.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.social.feed.dtos.CreateUserDetailsRequestDto;
 import com.social.feed.dtos.FollowUserResponseDto;
+import com.social.feed.dtos.UserCommentRequestDto;
 import com.social.feed.dtos.UserProfileResponseDto;
-import com.social.feed.exceptions.UserNotRegisterException;
-import com.social.feed.exceptions.UserProfileNotFoundException;
+import com.social.feed.exceptions.UserNotFoundException;
+import com.social.feed.exceptions.UserServiceException;
 import com.social.feed.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,14 +43,14 @@ class UserControllerTest {
     }
 
     @Test
-    void testRegisterUser() throws Exception {
+    void testRegisterUserException() throws Exception {
         CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
         createUserDetailsRequestDto.setFirstName("John");
         createUserDetailsRequestDto.setLastName("Doe");
         createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
         createUserDetailsRequestDto.setEmailId("john.doe@example.com");
 
-        doThrow(UserNotRegisterException.class).when(userService).createUser(Mockito.any());
+        doThrow(UserServiceException.class).when(userService).createUser(Mockito.any());
 
         mockMvc.perform(MockMvcRequestBuilders
                         .post("/api/v1/users")
@@ -61,6 +62,24 @@ class UserControllerTest {
     }
 
     @Test
+    void testRegisterUser() throws Exception {
+        CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
+        createUserDetailsRequestDto.setFirstName("John");
+        createUserDetailsRequestDto.setLastName("Doe");
+        createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
+        createUserDetailsRequestDto.setEmailId("john.doe@example.com");
+
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .post("/api/v1/users")
+                        .content(asJsonString(createUserDetailsRequestDto))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andDo(print());
+    }
+
+    @Test
     void testRegisterUserForUserNotRegisterException() throws Exception {
         CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
         createUserDetailsRequestDto.setFirstName("John");
@@ -68,7 +87,7 @@ class UserControllerTest {
         createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
         createUserDetailsRequestDto.setEmailId("john.doe@example.com");
 
-        doThrow(UserNotRegisterException.class).when(userService).createUser(Mockito.any());
+        doThrow(UserServiceException.class).when(userService).createUser(Mockito.any());
 
         mockMvc.perform(MockMvcRequestBuilders
                         .post("/api/v1/users")
@@ -81,7 +100,17 @@ class UserControllerTest {
 
     @Test
     void testAddSubscription_UserProfileNotFoundException() throws Exception {
-        doThrow(UserProfileNotFoundException.class)
+        doThrow(UserNotFoundException.class)
+                .when(userService)
+                .addUserSubscription(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/v1/users/subscribe/1/2/REGULAR")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+
+        doThrow(UserServiceException.class)
                 .when(userService)
                 .addUserSubscription(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
 
@@ -89,6 +118,14 @@ class UserControllerTest {
                         .get("/api/v1/users/subscribe/1/2/REGULAR")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isInternalServerError())
+                .andDo(print());
+    }
+    @Test
+    void testAddSubscription() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/v1/users/subscribe/1/2/REGULAR")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
                 .andDo(print());
     }
 
@@ -108,6 +145,16 @@ class UserControllerTest {
     }
 
     @Test
+    void testGetPotentialsUsersToBeFollowedException() throws Exception {
+        doThrow(UserServiceException.class).when(userService).getPotentialsUsersToBeFollowed();
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/v1/users/potentialsUsersToBeFollowed")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
+    }
+
+    @Test
     void testGetUserProfile_Success() throws Exception {
         UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto("John", "REGULAR");
         when(userService.getUserProfile(Mockito.anyLong())).thenReturn(userProfileResponseDto);
@@ -124,7 +171,29 @@ class UserControllerTest {
     @Test
     void testGetUserProfile_UserProfileNotFoundException() throws Exception {
         when(userService.getUserProfile(Mockito.anyLong()))
-                .thenThrow(new UserProfileNotFoundException("User profile not found"));
+                .thenThrow(new UserNotFoundException("User profile not found"));
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/v1/users/getProfile?userId=1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+    }
+
+    @Test
+    void testAcceptSubscription() throws Exception {
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/acceptSubscription/1/2")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(print());
+    }
+
+    @Test
+    void testGetUserProfile_Exception() throws Exception {
+        when(userService.getUserProfile(Mockito.anyLong()))
+                .thenThrow(new UserServiceException("User profile not found"));
 
         mockMvc.perform(MockMvcRequestBuilders
                         .get("/api/v1/users/getProfile?userId=1")
@@ -135,14 +204,159 @@ class UserControllerTest {
 
     @Test
     void testGetUsers() throws Exception {
-        when(userService.getPotentialsUsersToBeFollowed()).thenThrow(new UserProfileNotFoundException("Error fetching user suggestions"));
+        when(userService.getPotentialsUsersToBeFollowed()).thenThrow(new UserNotFoundException("Error fetching user suggestions"));
 
         mockMvc.perform(MockMvcRequestBuilders
                         .get("/api/v1/users/userSuggestions")
                         .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+    }
+
+    @Test
+    void testAcceptSubscription_UserNotFoundException() throws Exception {
+        doThrow(UserNotFoundException.class)
+                .when(userService)
+                .acceptSubscription(Mockito.anyString(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/acceptSubscription/1/2")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+
+        doThrow(UserServiceException.class)
+                .when(userService)
+                .acceptSubscription(Mockito.anyString(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/acceptSubscription/1/2")
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isInternalServerError())
                 .andDo(print());
     }
+
+    @Test
+    void testLikePost_UserNotFoundException() throws Exception {
+        doThrow(UserNotFoundException.class)
+                .when(userService)
+                .likePost(Mockito.anyLong(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/post/like?userId=1&postId=123")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+
+        doThrow(UserServiceException.class)
+                .when(userService)
+                .likePost(Mockito.anyLong(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/post/like?userId=1&postId=123")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError())
+                .andDo(print());
+    }
+
+    @Test
+    void testLikePost() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/post/like?userId=1&postId=123")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(print());
+    }
+
+    @Test
+    void testLikeEvent_UserServiceException() throws Exception {
+        doThrow(UserServiceException.class)
+                .when(userService)
+                .likeEvent(Mockito.anyLong(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/event/like?userId=1&eventId=456")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError())
+                .andDo(print());
+    }
+
+    @Test
+    void testLikeEvent() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/event/like?userId=1&eventId=456")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(print());
+    }
+
+    @Test
+    void testCommentPost_UserNotFoundException() throws Exception {
+        doThrow(UserNotFoundException.class)
+                .when(userService)
+                .commentPost(Mockito.any());
+
+        UserCommentRequestDto commentRequestDto = new UserCommentRequestDto();
+        commentRequestDto.setUserId(1L);
+        commentRequestDto.setPostId("123");
+        commentRequestDto.setComment("Test comment");
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/comment")
+                        .content(asJsonString(commentRequestDto))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+    }
+    @Test
+    void testCommentPost() throws Exception {
+        UserCommentRequestDto commentRequestDto = new UserCommentRequestDto();
+        commentRequestDto.setUserId(1L);
+        commentRequestDto.setPostId("123");
+        commentRequestDto.setComment("Test comment");
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/comment")
+                        .content(asJsonString(commentRequestDto))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(print());
+    }
+
+    @Test
+    void testCommentPost_UserServiceException() throws Exception {
+        doThrow(UserServiceException.class)
+                .when(userService)
+                .commentPost(Mockito.any());
+        UserCommentRequestDto commentRequestDto = new UserCommentRequestDto();
+        commentRequestDto.setUserId(1L);
+        commentRequestDto.setPostId("123");
+        commentRequestDto.setComment("Test comment");
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/comment")
+                        .content(asJsonString(commentRequestDto))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError())
+                .andDo(print());
+    }
+
+    @Test
+    void testLikeEvent_UserNotFoundException() throws Exception {
+        doThrow(UserNotFoundException.class)
+                .when(userService)
+                .likeEvent(Mockito.anyLong(), Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put("/api/v1/users/event/like?userId=1&eventId=456")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(print());
+    }
+
 
     private String asJsonString(final Object obj) {
         try {

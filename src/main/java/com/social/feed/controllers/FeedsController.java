@@ -1,9 +1,9 @@
 package com.social.feed.controllers;
 
 import com.social.feed.dtos.UserFeedsResponseDto;
-import com.social.feed.dtos.ErrorResponseDto;
-import com.social.feed.services.FeedService;
+import com.social.feed.exceptions.FeedServiceException;
 import com.social.feed.exceptions.UserNotFoundException;
+import com.social.feed.services.FeedService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -25,7 +27,7 @@ public class FeedsController {
     private final FeedService feedService;
 
     @GetMapping
-    public ResponseEntity<?> getFeeds(@RequestParam(name = "userId") String userId) {
+    public ResponseEntity<List<UserFeedsResponseDto>> getFeeds(@RequestParam(name = "userId") String userId) {
         try {
             log.info("Fetching feeds for user with ID: {}", userId);
 
@@ -37,12 +39,11 @@ public class FeedsController {
 
         } catch (UserNotFoundException e) {
             log.warn("UserNotFoundException: {}", e.getMessage());
-
-            ErrorResponseDto errorResponse = new ErrorResponseDto("User not found");
-
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body(errorResponse);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
+        }
+        catch (FeedServiceException e) {
+            log.warn("FeedServiceException: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
         }
     }
 }

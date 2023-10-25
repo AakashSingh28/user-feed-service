@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +12,13 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserPostResponseDto implements UserResponseDto{
+public class UserEventResponseDto implements  UserResponseDto{
+
+    private String eventName;
+
+    private Date eventStartDate;
+
+    private Date eventEndDate;
 
     private String content;
 
@@ -22,5 +29,4 @@ public class UserPostResponseDto implements UserResponseDto{
     private Set<String> usersLike;
 
     private Map<Long, List<String>> userAndComments;
-
 }

@@ -1,7 +1,9 @@
 package com.social.feed.controllers;
 
 import com.social.feed.dtos.UserFeedsResponseDto;
+import com.social.feed.exceptions.FeedServiceException;
 import com.social.feed.exceptions.UserNotFoundException;
+import com.social.feed.respositories.UserRepository;
 import com.social.feed.services.FeedService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -27,6 +28,9 @@ class FeedsControllerTest {
     @Mock
     private FeedService feedService;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private FeedsController feedsController;
 
@@ -38,10 +42,11 @@ class FeedsControllerTest {
 
     @Test
     void testGetFeedsSuccess() throws Exception {
+
         when(feedService.getFeedsForTheUser(anyString()))
                 .thenReturn(Collections.singletonList(new UserFeedsResponseDto()));
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/feeds")
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/feeds")
                         .param("userId", "123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -53,10 +58,22 @@ class FeedsControllerTest {
         when(feedService.getFeedsForTheUser(anyString()))
                 .thenThrow(UserNotFoundException.class);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/feeds")
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/feeds")
                         .param("userId", "123")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andReturn();
+    }
+
+    @Test
+    void testGetFeedsForFeedServiceException() throws Exception {
+        when(feedService.getFeedsForTheUser(anyString()))
+                .thenThrow(FeedServiceException.class);
+
+       mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/feeds")
+                        .param("userId", "123")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError())
                 .andReturn();
     }
 }

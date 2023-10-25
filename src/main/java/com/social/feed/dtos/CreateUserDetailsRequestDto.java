@@ -14,4 +14,6 @@ public class CreateUserDetailsRequestDto {
     private String dateOfBirth;
     @NotNull
     private String emailId;
+    @NotNull
+    private String userLocation;
 }

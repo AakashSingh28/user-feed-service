@@ -18,6 +18,7 @@ public class UserDetails {
     private String dateOfBirth;
     private String emailId;
     private UserType userType;
+    private String userLocation;
     private Date createdOn;
     private Date updatedOn;
 
