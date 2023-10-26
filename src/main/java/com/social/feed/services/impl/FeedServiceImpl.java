@@ -11,6 +11,7 @@ import com.social.feed.respositories.UserFollowingRepository;
 import com.social.feed.respositories.UserRepository;
 import com.social.feed.services.FeedService;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,8 @@ public class FeedServiceImpl implements FeedService {
     private final UserRepository userRepository;
 
     @Value("${feedLimit}")
-    int feedLimit;
+    @Setter
+    private int feedLimit;
 
     @Override
     public List<UserFeedsResponseDto> getFeedsForTheUser(String userId) {
@@ -55,7 +57,8 @@ public class FeedServiceImpl implements FeedService {
 
                     if (userPostResponseDtos != null ) {
                         userPosts.addAll(userPostResponseDtos);
-                    } else if (userEventResponseDtos!=null) {
+                    }
+                    if (userEventResponseDtos!=null) {
                         userPosts.addAll(userEventResponseDtos);
                     }
                 }
@@ -72,13 +75,13 @@ public class FeedServiceImpl implements FeedService {
         // Step 1: Sort userPosts by ranking (post score) in descending order
         userPosts.sort(Comparator.comparingInt(UserResponseDto::getPostScore).reversed());
 
-        // Step 2: Perform secondary sorting by location
+        // Step 2: Performing secondary sorting by location
         userPosts.sort((o1, o2) -> {
             int postScoreComparison = Integer.compare(o2.getPostScore(), o1.getPostScore());
             if (postScoreComparison != 0) {
                 return postScoreComparison; // Sort by ranking first
             } else {
-                // If ranking is the same, sort by location (preserve location-relevant posts)
+                // If ranking is the same, sort by location
                 if (isLocationRelevant(o1, userLocation) && !isLocationRelevant(o2, userLocation)) {
                     return -1;
                 } else if (!isLocationRelevant(o1, userLocation) && isLocationRelevant(o2, userLocation)) {
@@ -92,7 +95,7 @@ public class FeedServiceImpl implements FeedService {
         // Step 3: Limit the number of items in the feed (e.g., top 200 items)
         userPosts = userPosts.stream().limit(feedLimit).collect(Collectors.toList());
 
-        // Step 4: Build UserFeedsResponseDto for each post
+
         return userPosts.stream()
                 .map(this::buildFeedResponseDto)
                 .filter(Optional::isPresent)
@@ -111,9 +114,9 @@ public class FeedServiceImpl implements FeedService {
 
 
     private boolean isLocationRelevant(UserResponseDto responseDto, String userLocation) {
-        if (userLocation == null) {
-            return true;
+        if (userLocation == null && responseDto.getUserLocation() == null) {
+            return false;
         }
-        return userLocation.equalsIgnoreCase(responseDto.getUserLocation()) || responseDto.getUserLocation() == null;
+        return userLocation.equalsIgnoreCase(responseDto.getUserLocation());
     }
 }

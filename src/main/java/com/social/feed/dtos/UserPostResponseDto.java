@@ -1,5 +1,6 @@
 package com.social.feed.dtos;
 
+import com.social.feed.enums.PostType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,4 +24,7 @@ public class UserPostResponseDto implements UserResponseDto{
 
     private Map<Long, List<String>> userAndComments;
 
+    private boolean isEventPost;
+
+    private String postType;
 }

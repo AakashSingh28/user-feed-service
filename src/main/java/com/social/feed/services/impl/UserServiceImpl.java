@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
             log.info("User created successfully: {}", userDetails);
         } catch (UserServiceException e) {
             log.error("Error while creating user", e);
-            throw new RuntimeException("Error while creating user", e);
+            throw new UserServiceException("Error while creating user", e);
         }
     }
 

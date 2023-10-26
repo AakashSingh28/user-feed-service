@@ -45,10 +45,10 @@ class UserControllerTest {
     @Test
     void testRegisterUserException() throws Exception {
         CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
-        createUserDetailsRequestDto.setFirstName("John");
-        createUserDetailsRequestDto.setLastName("Doe");
+        createUserDetailsRequestDto.setFirstName("Amit");
+        createUserDetailsRequestDto.setLastName("singh");
         createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
-        createUserDetailsRequestDto.setEmailId("john.doe@example.com");
+        createUserDetailsRequestDto.setEmailId("Amit.singh@example.com");
 
         doThrow(UserServiceException.class).when(userService).createUser(Mockito.any());
 
@@ -64,10 +64,10 @@ class UserControllerTest {
     @Test
     void testRegisterUser() throws Exception {
         CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
-        createUserDetailsRequestDto.setFirstName("John");
-        createUserDetailsRequestDto.setLastName("Doe");
+        createUserDetailsRequestDto.setFirstName("Amit");
+        createUserDetailsRequestDto.setLastName("singh");
         createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
-        createUserDetailsRequestDto.setEmailId("john.doe@example.com");
+        createUserDetailsRequestDto.setEmailId("Amit.singh@example.com");
 
 
         mockMvc.perform(MockMvcRequestBuilders
@@ -82,10 +82,10 @@ class UserControllerTest {
     @Test
     void testRegisterUserForUserNotRegisterException() throws Exception {
         CreateUserDetailsRequestDto createUserDetailsRequestDto = new CreateUserDetailsRequestDto();
-        createUserDetailsRequestDto.setFirstName("John");
-        createUserDetailsRequestDto.setLastName("Doe");
+        createUserDetailsRequestDto.setFirstName("Amit");
+        createUserDetailsRequestDto.setLastName("singh");
         createUserDetailsRequestDto.setDateOfBirth("1990-01-01");
-        createUserDetailsRequestDto.setEmailId("john.doe@example.com");
+        createUserDetailsRequestDto.setEmailId("Amit.singh@example.com");
 
         doThrow(UserServiceException.class).when(userService).createUser(Mockito.any());
 

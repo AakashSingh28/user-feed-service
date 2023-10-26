@@ -3,7 +3,6 @@ package com.social.feed.controllers;
 import com.social.feed.dtos.UserFeedsResponseDto;
 import com.social.feed.exceptions.FeedServiceException;
 import com.social.feed.exceptions.UserNotFoundException;
-import com.social.feed.respositories.UserRepository;
 import com.social.feed.services.FeedService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,8 +27,6 @@ class FeedsControllerTest {
     @Mock
     private FeedService feedService;
 
-    @Mock
-    private UserRepository userRepository;
 
     @InjectMocks
     private FeedsController feedsController;

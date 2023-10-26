@@ -5,6 +5,7 @@ import com.social.feed.dtos.UserEventResponseDto;
 import com.social.feed.dtos.UserPostResponseDto;
 import com.social.feed.dtos.UserResponseDto;
 import com.social.feed.entities.UserFollowings;
+import com.social.feed.enums.PostType;
 import com.social.feed.exceptions.FeedServiceException;
 import com.social.feed.exceptions.UserServiceException;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -40,8 +42,8 @@ class UserPostServiceInteractTest {
         UserFollowings userFollowing = new UserFollowings();
         userFollowing.setFollowerId(1L);
 
-        UserPostResponseDto userPostResponseDto = new UserPostResponseDto("content", 2, "Bangalore", Collections.emptySet(), Collections.emptyMap());
-        UserPostResponseDto[] mockPosts = { userPostResponseDto };
+        UserPostResponseDto userPostResponseDto = new UserPostResponseDto("content", 2, "Bangalore", Collections.emptySet(), Collections.emptyMap(),false, PostType.TEXT.name());
+        UserPostResponseDto[] mockPosts = {userPostResponseDto};
 
         when(restTemplate.getForEntity(anyString(), eq(UserPostResponseDto[].class)))
                 .thenReturn(new ResponseEntity<>(mockPosts, HttpStatus.OK));
@@ -56,26 +58,22 @@ class UserPostServiceInteractTest {
     }
 
 
-
-
-
     @Test
     void testGetPostsFromFollowingPeople_Exception() {
-        // Mock the restTemplate to return null response
         Mockito.when(restTemplate.getForEntity(any(String.class), eq(UserPostResponseDto[].class)))
-                .thenReturn(null);
+                .thenThrow(new FeedServiceException("Connection failed"));
 
         UserFollowings userFollowing = new UserFollowings();
-        userFollowing.setFollowingId(1l);
-        userFollowing.setFollowerId(2l);
+        userFollowing.setFollowingId(1L);
+        userFollowing.setFollowerId(2L);
 
-        FeedServiceException exception = assertThrows(FeedServiceException.class,
-                () -> userPostServiceInteract.getPostsFromFollowingPeople(userFollowing));
-
-        assertTrue(exception.getMessage().contains("2"));
+        assertThrows(FeedServiceException.class, () -> {
+            userPostServiceInteract.getPostsFromFollowingPeople(userFollowing);
+        });
 
         Mockito.verify(restTemplate, Mockito.times(1)).getForEntity(any(String.class), eq(UserPostResponseDto[].class));
     }
+
 
     @Test
     void testUpdatePostRankingOnUserLike() {
@@ -85,6 +83,21 @@ class UserPostServiceInteractTest {
         assertDoesNotThrow(() -> userPostServiceInteract.updatePostRankingOnUserLike("postId", 1L));
     }
     @Test
+    void testUpdatePostRankingOnUserLikeException() {
+        when(restTemplate.postForEntity(
+                Mockito.anyString(),
+                Mockito.any(),
+                eq(String.class)
+        ))
+                .thenThrow(UserServiceException.class);
+
+        assertThrows(UserServiceException.class, () -> {
+            userPostServiceInteract.updatePostRankingOnUserLike("100", 101L);
+        });
+    }
+
+
+    @Test
     void testUpdatePostRankingOnUserComment() {
         UserCommentRequestDto commentRequestDto = new UserCommentRequestDto();
         commentRequestDto.setUserId(1L);
@@ -93,12 +106,24 @@ class UserPostServiceInteractTest {
         when(restTemplate.postForEntity(anyString(), eq(commentRequestDto), eq(String.class)))
                 .thenReturn(new ResponseEntity<>("Post ranking updated successfully", HttpStatus.OK));
 
-        ResponseEntity<String> response = userPostServiceInteract.updatePostRankingOnUserComment(commentRequestDto);
+        userPostServiceInteract.updatePostRankingOnUserComment(commentRequestDto);
 
-        assertNotNull(response, "Response entity should not be null");
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "HTTP status code should be OK");
-        assertEquals("Post ranking updated successfully", response.getBody(), "Response body should match the expected value");
+        Mockito.verify(restTemplate, Mockito.times(1)).postForEntity(anyString(), eq(commentRequestDto), eq(String.class));
     }
+    @Test
+    void testUpdatePostRankingOnUserCommentException() {
+        UserCommentRequestDto commentRequestDto = new UserCommentRequestDto();
+        commentRequestDto.setComment("My comment");
+        commentRequestDto.setPostId("1001");
+        commentRequestDto.setUserId(101L);
+        when(restTemplate.postForEntity(Mockito.anyString(), any(), eq(String.class)))
+                .thenThrow(UserServiceException.class);
+
+        assertThrows(UserServiceException.class, () -> {
+            userPostServiceInteract.updatePostRankingOnUserComment(commentRequestDto);
+        });
+    }
+
     @Test
     void testUpdateEventRankingOnUserLike() {
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
@@ -108,9 +133,20 @@ class UserPostServiceInteractTest {
     }
 
     @Test
+    void testUpdateEventRankingOnUserLikeException() {
+        when(restTemplate.postForEntity(Mockito.anyString(), any(), eq(String.class)))
+                .thenThrow(UserServiceException.class);
+
+        assertThrows(UserServiceException.class, () -> {
+            userPostServiceInteract.updateEventRankingOnUserLike(101L, "100");
+        });
+    }
+
+
+    @Test
     void testGetEventsFromFollowingPeople() {
         UserEventResponseDto[] response = new UserEventResponseDto[1];
-        UserEventResponseDto  userEventResponseDto= new UserEventResponseDto();
+        UserEventResponseDto userEventResponseDto = new UserEventResponseDto();
 
         userEventResponseDto.setEventName("Sample Event Name");
         userEventResponseDto.setEventStartDate(new Date());
@@ -136,8 +172,8 @@ class UserPostServiceInteractTest {
                 .thenReturn(ResponseEntity.ok(response));
 
         UserFollowings userFollowing = new UserFollowings();
-        userFollowing.setFollowingId(1l);
-        userFollowing.setFollowerId(2l);
+        userFollowing.setFollowingId(1L);
+        userFollowing.setFollowerId(2L);
 
         List<UserResponseDto> userEventResponses = userPostServiceInteract.getEventsFromFollowingPeople(userFollowing);
         assertNotNull(userEventResponses);
@@ -152,13 +188,14 @@ class UserPostServiceInteractTest {
                 .thenThrow(new UserServiceException("Event not found"));
 
         UserFollowings userFollowing = new UserFollowings();
-        userFollowing.setFollowingId(1l);
-        userFollowing.setFollowerId(2l);
+        userFollowing.setFollowingId(1L);
+        userFollowing.setFollowerId(2L);
 
-        UserServiceException exception = assertThrows(UserServiceException.class,
+        assertThrows(UserServiceException.class,
                 () -> userPostServiceInteract.getEventsFromFollowingPeople(userFollowing));
 
         Mockito.verify(restTemplate, Mockito.times(1)).getForEntity(any(String.class), eq(UserEventResponseDto[].class));
     }
+
 
 }

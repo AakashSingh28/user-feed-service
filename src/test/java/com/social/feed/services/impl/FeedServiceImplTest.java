@@ -6,6 +6,7 @@ import com.social.feed.dtos.UserPostResponseDto;
 import com.social.feed.dtos.UserResponseDto;
 import com.social.feed.entities.UserDetails;
 import com.social.feed.entities.UserFollowings;
+import com.social.feed.enums.PostType;
 import com.social.feed.enums.UserType;
 import com.social.feed.exceptions.UserNotFoundException;
 import com.social.feed.interactors.UserPostServiceInteract;
@@ -51,25 +52,32 @@ class FeedServiceImplTest {
         when(userFollowingRepository.findUserFollowingsByActiveAndFollowerId(true, 123L))
                 .thenReturn(Collections.singletonList(new UserFollowings()));
 
-        UserPostResponseDto userPostResponseDto1 = new UserPostResponseDto("content", 2, "Bangalore", Collections.emptySet(), Collections.emptyMap());
-        UserPostResponseDto userPostResponseDto2 = new UserPostResponseDto("content", 2, "Patna", Collections.emptySet(), Collections.emptyMap());
-        UserPostResponseDto userPostResponseDto3 = new UserPostResponseDto("content", 0, "Pune", Collections.emptySet(), Collections.emptyMap());
-        UserPostResponseDto userPostResponseDto4 = new UserPostResponseDto("content", 0, "Pune", Collections.emptySet(), Collections.emptyMap());
-        UserPostResponseDto userPostResponseDto5 = new UserPostResponseDto("content", 2, null, Collections.emptySet(), Collections.emptyMap());
+        UserPostResponseDto userPostResponseDto1 = new UserPostResponseDto("content1", 2, "Bangalore", Collections.emptySet(), Collections.emptyMap(), false,PostType.TEXT.name());
+        UserPostResponseDto userPostResponseDto2 = new UserPostResponseDto("content2", 2, "Patna", Collections.emptySet(), Collections.emptyMap(),false,PostType.TEXT.name());
+        UserPostResponseDto userPostResponseDto3 = new UserPostResponseDto("content3", 0, "Pune", Collections.emptySet(), Collections.emptyMap(),false,PostType.TEXT.name());
+        UserPostResponseDto userPostResponseDto4 = new UserPostResponseDto("content4", 0, "Pune", Collections.emptySet(), Collections.emptyMap(),false,PostType.TEXT.name());
+        UserPostResponseDto userPostResponseDto5 = new UserPostResponseDto("content5", 0, null, Collections.emptySet(), Collections.emptyMap(),false,PostType.TEXT.name());
         UserEventResponseDto userEventResponseDto1 =
-                new UserEventResponseDto("Event Name", new Date(), new Date(), "Event Content", 42, "Indore", Collections.emptySet(), Collections.emptyMap());
-        UserEventResponseDto userEventResponseDto2 = new UserEventResponseDto("Event Name", new Date(), new Date(), "Event Content", 10, "Bhopal", Collections.emptySet(), Collections.emptyMap());
+                new UserEventResponseDto("Event Content6", new Date(), new Date(), "Event Content6", 42, "Indore", Collections.emptySet(), Collections.emptyMap(),true,PostType.TEXT.name());
+        UserEventResponseDto userEventResponseDto2 = new UserEventResponseDto("Event Content7", new Date(), new Date(), "Event Content7", 10, "Bhopal", Collections.emptySet(), Collections.emptyMap(),true,PostType.TEXT.name());
 
         when(userPostServiceInteract.getPostsFromFollowingPeople(any(UserFollowings.class)))
                 .thenReturn(List.of(userPostResponseDto1, userPostResponseDto2,userPostResponseDto3,userPostResponseDto4,userPostResponseDto5));
 
         when(userPostServiceInteract.getEventsFromFollowingPeople(any(UserFollowings.class)))
                 .thenReturn(List.of(userEventResponseDto1, userEventResponseDto2));
-
+        feedService.setFeedLimit(10);
         List<UserFeedsResponseDto> feeds = feedService.getFeedsForTheUser("123");
 
+        List<String> expectedOrder = Arrays.asList
+                ("Event Content6", "Event Content7","content1", "content2", "content3", "content4","content5");
+
         assertNotNull(feeds);
-        assertTrue(feeds.isEmpty());
+        assertTrue(!feeds.isEmpty());
+
+        for (int i = 0; i < expectedOrder.size(); i++) {
+            assertTrue(feeds.get(i).getFeed().getContent().equalsIgnoreCase(expectedOrder.get(i).trim()));
+        }
     }
 
     @Test
@@ -123,7 +131,7 @@ class FeedServiceImplTest {
     @Test
     void testGetFeedsForTheUser_LimitFeeds() {
         UserDetails userDetails = getUserDetails(UserType.CELEBRITY);
-        feedService.feedLimit=10;
+        feedService.setFeedLimit(10);
         when(userRepository.findById(Long.valueOf("123"))).thenReturn(Optional.of(userDetails));
         when(userFollowingRepository.findUserFollowingsByActiveAndFollowerId(true, 123L))
                 .thenReturn(Collections.singletonList(new UserFollowings()));
@@ -131,7 +139,7 @@ class FeedServiceImplTest {
         // Mock more posts and events to exceed the feedLimit
         List<UserResponseDto> userPostResponseDtos = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
-            userPostResponseDtos.add(new UserPostResponseDto("content", i, "Bangalore", Collections.emptySet(), Collections.emptyMap()));
+            userPostResponseDtos.add(new UserPostResponseDto("content", i, "Bangalore", Collections.emptySet(), Collections.emptyMap(),false,PostType.TEXT.name()));
         }
 
         when(userPostServiceInteract.getPostsFromFollowingPeople(any(UserFollowings.class)))

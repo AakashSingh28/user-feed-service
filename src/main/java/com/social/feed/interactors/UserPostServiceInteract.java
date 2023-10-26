@@ -31,9 +31,7 @@ public class UserPostServiceInteract {
 
         try {
             ResponseEntity<UserPostResponseDto[]> responseEntity = restTemplate.getForEntity(uri, UserPostResponseDto[].class);
-            if(responseEntity == null){
-                throw new FeedServiceException("Error fetching user profile ");
-            }
+
             List<UserResponseDto> userPostResponses = Arrays.asList(responseEntity.getBody());
 
             return userPostResponses;
@@ -44,35 +42,26 @@ public class UserPostServiceInteract {
     }
 
     public void updatePostRankingOnUserLike(String postId, long userId) {
-        String updateRankingUri = postServiceBaseUrl + "post/like/"+userId+"/"+postId;
+        String updateRankingUri = postServiceBaseUrl + "/post/like/"+userId+"/"+postId;
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(updateRankingUri, null, String.class);
+             restTemplate.postForEntity(updateRankingUri, null, String.class);
 
-            if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                log.info("Post ranking updated successfully");
-            }
         } catch (UserServiceException ex) {
             log.error("Error updating post ranking", ex);
+            throw new UserServiceException("Error updating post ranking",ex.getCause());
         }
     }
 
-    public ResponseEntity<String> updatePostRankingOnUserComment(UserCommentRequestDto commentRequestDto) {
+    public void updatePostRankingOnUserComment(UserCommentRequestDto commentRequestDto) {
         String updateRankingUri = postServiceBaseUrl + "/comment";
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(updateRankingUri, commentRequestDto, String.class);
+            restTemplate.postForEntity(updateRankingUri, commentRequestDto, String.class);
 
-            if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                log.info("Post ranking updated successfully");
-                return ResponseEntity.status(responseEntity.getStatusCode()).body("Post ranking updated successfully");
-            } else {
-                log.warn("Failed to update post ranking");
-                return ResponseEntity.status(responseEntity.getStatusCode()).body("Failed to update post ranking");
-            }
         } catch (UserServiceException ex) {
             log.error("Error updating post ranking", ex);
-            return ResponseEntity.status(500).body("Internal server error");
+            throw new UserServiceException("Error updating post ranking",ex.getCause());
         }
     }
 
@@ -80,14 +69,11 @@ public class UserPostServiceInteract {
         String updateRankingUri = postServiceBaseUrl + "/event/like/"+userId+"/"+eventId;
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(updateRankingUri, null, String.class);
-
-            if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                log.info("Event ranking updated successfully");
-            }
+            restTemplate.postForEntity(updateRankingUri, null, String.class);
 
         } catch (UserServiceException ex) {
             log.error("Error updating event ranking", ex);
+            throw new UserServiceException("Error updating event ranking",ex.getCause());
         }
     }
 
